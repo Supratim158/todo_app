@@ -1,6 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutterrr_app/dashboard.dart';
 import 'package:flutterrr_app/signupPage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'colors.dart';
+import 'package:http/http.dart' as http;
+
+import 'config.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,17 +19,53 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isNotValidate = false;
+  late SharedPreferences prefs;
 
   @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    initSharedPref();
   }
 
-  void _login() {
-    // Add login logic here
-    print('Email: ${_emailController.text}, Password: ${_passwordController.text}');
+  void initSharedPref() async{
+    prefs = await SharedPreferences.getInstance();
+  }
+
+  void loginUser() async{
+    if(_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty){
+      var reqBody = {
+        "email":_emailController.text,
+        "password":_passwordController.text
+      };
+
+      var response = await http.post(Uri.parse(login),
+          headers: {"Content-Type":"application/json"},
+          body: jsonEncode(reqBody)
+      );
+      var jsonResponse = jsonDecode(response.body);
+
+      print(jsonResponse['status']);
+
+      if (jsonResponse['status']){
+        var myToken = jsonResponse['token'];
+        prefs.setString('token', myToken);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => DashboardPage(token: myToken)),
+        );
+      }
+      else{
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Something went wrong'),
+            duration: Duration(seconds: 3), // Stays visible for 3 seconds
+            backgroundColor: Colors.red, // Optional: Red to indicate error
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -58,6 +101,9 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     labelText: 'Email',
                     labelStyle: const TextStyle(color: Colors.black54),
+                    errorText: _isNotValidate && _emailController.text.isEmpty
+                        ? 'Please enter your email'
+                        : null,
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
@@ -73,12 +119,17 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     labelText: 'Password',
                     labelStyle: const TextStyle(color: Colors.black54),
+                    errorText: _isNotValidate && _passwordController.text.isEmpty
+                        ? 'Please enter your password'
+                        : null,
                   ),
                   obscureText: true,
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: _login,
+                  onPressed: ()=>{
+                    loginUser()
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
@@ -110,3 +161,4 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+

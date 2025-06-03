@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'colors.dart';
+import 'config.dart';
 import 'loginPage.dart';
+import 'package:http/http.dart' as http;
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -12,17 +16,45 @@ class SignupPage extends StatefulWidget {
 class _SignupPageState extends State<SignupPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isNotValidate = false;
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
+  void registerUser() async{
+    if(_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty){
+      var regBody = {
+        "email":_emailController.text,
+        "password":_passwordController.text
+      };
 
-  void _signup() {
-    // Add signup logic here
-    print('Email: ${_emailController.text}, Password: ${_passwordController.text}');
+      var response = await http.post(Uri.parse(registration),
+          headers: {"Content-Type":"application/json"},
+          body: jsonEncode(regBody)
+      );
+
+      var jsonResponse = jsonDecode(response.body);
+
+      print(jsonResponse['status']);
+      
+      if (jsonResponse['status']){
+        Navigator.push(context, MaterialPageRoute(builder: (context)=>LoginPage()));
+      }
+      else{
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Something went wrong'),
+            duration: Duration(seconds: 3), // Stays visible for 3 seconds
+            backgroundColor: Colors.red, // Optional: Red to indicate error
+          ),
+        );
+      }
+
+
+    }
+
+    else{
+      setState(() {
+        _isNotValidate= true;
+      });
+    }
   }
 
   @override
@@ -46,6 +78,15 @@ class _SignupPageState extends State<SignupPage> {
                     color: Colors.white,
                   ),
                 ),
+                const SizedBox(height: 12),
+                const Text(
+                  'CREATE AN ACCOUNT',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
                 const SizedBox(height: 32),
                 TextField(
                   controller: _emailController,
@@ -58,6 +99,9 @@ class _SignupPageState extends State<SignupPage> {
                     ),
                     labelText: 'Email',
                     labelStyle: const TextStyle(color: Colors.black54),
+                    errorText: _isNotValidate && _emailController.text.isEmpty
+                        ? 'Please enter your email'
+                        : null,
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
@@ -73,12 +117,17 @@ class _SignupPageState extends State<SignupPage> {
                     ),
                     labelText: 'Password',
                     labelStyle: const TextStyle(color: Colors.black54),
+                    errorText: _isNotValidate && _passwordController.text.isEmpty
+                        ? 'Please enter your password'
+                        : null,
                   ),
                   obscureText: true,
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: _signup,
+                  onPressed: ()=>{
+                    registerUser()
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
