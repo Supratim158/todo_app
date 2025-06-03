@@ -39,6 +39,7 @@ dependencies:
   shared_preferences:
   jwt_decoder:
   flutter_slidable:
+  velocity_x:
 
 dev_dependencies:
   flutter_test:
